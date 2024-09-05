@@ -223,6 +223,7 @@ class FlutterWatchOsConnectivity extends FlutterSmartWatchPlatformInterface {
       _watchOSObserver.onProgressFileTransferListStreamController.stream;
   Stream<FileTransfer> get fileTransferDidFinish =>
       _watchOSObserver.fileTransferDidFinishStreamController.stream;
+  Stream<String> get onError => _watchOSObserver.errorStreamController.stream;
 
   @override
   void dispose() {
