@@ -17,6 +17,7 @@ class WatchOSObserver {
   late StreamController<List<FileTransfer>>
       onProgressFileTransferListStreamController;
   late StreamController<FileTransfer> fileTransferDidFinishStreamController;
+  late StreamController<String> errorStreamController;
   late Map<String, MessageReplyHandler> replyHandlers;
   late Map<String, ProgressHandler> progressHandlers;
 
@@ -33,8 +34,14 @@ class WatchOSObserver {
             .add(ActivationState.values[activateStateIndex]);
         break;
       case "pairDeviceInfoChanged":
-        Map<String, dynamic> rawPairedDeviceInfoJson =
-            (call.arguments as Map? ?? {}).toMapStringDynamic();
+        Map<String, dynamic> rawPairedDeviceInfoJson = {};
+        try {
+          rawPairedDeviceInfoJson =
+              (call.arguments as Map? ?? {}).toMapStringDynamic();
+
+        } catch (e) {
+          rawPairedDeviceInfoJson = jsonDecode(call.arguments);
+        }
         if (rawPairedDeviceInfoJson["error"] != null) {
           ///* Emit error and return
           pairedDeviceInfoStreamController
@@ -195,6 +202,9 @@ class WatchOSObserver {
           progressHandlers[arguments["transferId"]]?.call(progress);
         }
         break;
+      case "onError":
+        errorStreamController.add(call.arguments);
+        break;
     }
   }
 
@@ -243,6 +253,7 @@ class WatchOSObserver {
     fileInfoStreamController = StreamController.broadcast();
     onProgressFileTransferListStreamController = StreamController.broadcast();
     fileTransferDidFinishStreamController = StreamController.broadcast();
+    errorStreamController = StreamController.broadcast();
     replyHandlers = {};
     progressHandlers = {};
   }
@@ -259,6 +270,7 @@ class WatchOSObserver {
     fileInfoStreamController.close();
     onProgressFileTransferListStreamController.close();
     fileTransferDidFinishStreamController.close();
+    errorStreamController.close();
     replyHandlers.clear();
     progressHandlers.clear();
   }
