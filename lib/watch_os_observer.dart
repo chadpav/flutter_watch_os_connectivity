@@ -210,8 +210,6 @@ class WatchOSObserver {
         break;
       case "onPendingFileTransferListChanged":
         var arguments = call.arguments;
-        errorStreamController
-            .add("TTT - onPendingFileTransferListChanged: $arguments");
         if (arguments != null &&
             arguments is List &&
             arguments.every((transfer) => transfer is Map)) {
@@ -223,8 +221,6 @@ class WatchOSObserver {
         }
         break;
       case "onFileTransferDidFinish":
-        errorStreamController
-            .add("TTT - onPendingFileTransferListChanged: ${call.arguments}");
         Map<String, dynamic> arguments = (call.arguments as Map? ?? {})
             .map((key, value) => MapEntry(key.toString(), value));
         if (arguments["error"] != null) {

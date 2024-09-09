@@ -162,7 +162,6 @@ class FlutterWatchOsConnectivity extends FlutterSmartWatchPlatformInterface {
     mMetadata["id"] = getRandomString(20);
     var rawFileTransferInMap = await channel.invokeMethod(
         "transferFileInfo", {"filePath": file.path, "metadata": mMetadata});
-    _watchOSObserver.errorStreamController.add("transferFileInfo: $rawFileTransferInMap");
     if (rawFileTransferInMap != null && rawFileTransferInMap is Map) {
       Map<String, dynamic> fileTransferInJson =
           rawFileTransferInMap.toMapStringDynamic();
