@@ -38,7 +38,6 @@ class WatchOSObserver {
         try {
           rawPairedDeviceInfoJson =
               (call.arguments as Map? ?? {}).toMapStringDynamic();
-
         } catch (e) {
           rawPairedDeviceInfoJson = jsonDecode(call.arguments);
         }
@@ -125,7 +124,7 @@ class WatchOSObserver {
         break;
       case "onUserInfoTransferDidFinish":
         Map<String, dynamic> rawUserInfoTransferJson =
-            (call.arguments as Map? ?? {}).toMapStringDynamic();
+            jsonDecode(call.arguments);
         if (rawUserInfoTransferJson["error"] != null) {
           //* Emit error and return
           userInfoTransferFinishedStreamController
@@ -143,8 +142,29 @@ class WatchOSObserver {
         }
         break;
       case "onFileReceived":
-        Map<String, dynamic> rawFileJson =
-            (call.arguments as Map? ?? {}).toMapStringDynamic();
+        Map<String, dynamic> rawFileJson = {};
+        bool jsonEncoded = false;
+        try {
+          rawFileJson = jsonDecode(call.arguments.toString());
+          jsonEncoded = true;
+        } catch (e) {
+          print("jsonDecode failed: $e");
+        }
+
+        try {
+          rawFileJson = (call.arguments as Map? ?? {}).toMapStringDynamic();
+          jsonEncoded = true;
+        } catch (e) {
+          print("toMapStringDynamic failed: $e");
+        }
+
+        if (!jsonEncoded) {
+          errorStreamController.add(
+              "Error onFileReceived while encoding the arguments: ${call.arguments}");
+          fileInfoStreamController.addError(
+              "Error onFileReceived while encoding the arguments: ${call.arguments}");
+          return;
+        }
 
         if (rawFileJson["error"] != null) {
           //* Emit error and return
@@ -153,17 +173,45 @@ class WatchOSObserver {
         }
 
         ///* Check if file path is not null
-        if (rawFileJson["path"] != null) {
+        if (rawFileJson.containsKey("path")) {
           //* get received file from path
-          var receivedFile = File(rawFileJson["path"]);
+          final filePath = rawFileJson["path"] as String;
+          var receivedFile = File.fromUri(Uri.parse(filePath));
+
+          Map<String, dynamic> metaData = {};
+          bool metaDataJsonEncoded = false;
+          final rawMetaData = rawFileJson["metadata"];
+          try {
+            metaData = jsonDecode(rawMetaData);
+            metaDataJsonEncoded = true;
+          } catch (e) {
+            print("jsonDecode failed: $e");
+          }
+
+          try {
+            metaData = (rawMetaData as Map? ?? {}).toMapStringDynamic();
+            metaDataJsonEncoded = true;
+          } catch (e) {
+            print("toMapStringDynamic failed: $e");
+          }
+
+          if (!metaDataJsonEncoded) {
+            errorStreamController.add(
+                "Error onFileReceived while encoding the metadata: ${rawMetaData}");
+            fileInfoStreamController.addError(
+                "Error onFileReceived while encoding the metadata: ${rawMetaData}");
+            return;
+          }
 
           // * add received file to global stream
           fileInfoStreamController
-              .add(Pair(right: rawFileJson["metadata"], left: receivedFile));
+              .add(Pair(right: metaData, left: receivedFile));
         }
         break;
       case "onPendingFileTransferListChanged":
         var arguments = call.arguments;
+        errorStreamController
+            .add("TTT - onPendingFileTransferListChanged: $arguments");
         if (arguments != null &&
             arguments is List &&
             arguments.every((transfer) => transfer is Map)) {
@@ -175,6 +223,8 @@ class WatchOSObserver {
         }
         break;
       case "onFileTransferDidFinish":
+        errorStreamController
+            .add("TTT - onPendingFileTransferListChanged: ${call.arguments}");
         Map<String, dynamic> arguments = (call.arguments as Map? ?? {})
             .map((key, value) => MapEntry(key.toString(), value));
         if (arguments["error"] != null) {
